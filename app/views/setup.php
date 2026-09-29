@@ -1,0 +1,1 @@
+<section class="standalone card empty"><span class="empty-icon"><?= icon('settings') ?></span><h1>Preparar PIPAS</h1><p>La base de datos todavía no está disponible.</p><p>Configura la conexión y ejecuta el instalador del proyecto para habilitar el sistema.</p><a class="button primary" href="<?= e(url('login')) ?>">Volver a intentar</a></section>

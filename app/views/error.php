@@ -1,0 +1,1 @@
+<section class="card empty standalone"><span class="empty-icon"><?= icon('lock') ?></span><h1><?= e($title) ?></h1><p><?= e($message) ?></p><a class="button primary" href="<?= e(url()) ?>">Volver al inicio</a></section>
