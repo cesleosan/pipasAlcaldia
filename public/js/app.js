@@ -25,7 +25,7 @@ geo?.addEventListener('click',async()=>{
  try{const body=new FormData();body.append('csrf',form.querySelector('[name=csrf]').value);body.append('address',[street,number,colony.selectedOptions[0].textContent,document.querySelector('#cp').value].filter(Boolean).join(', '));const res=await fetch(form.dataset.geocodeUrl,{method:'POST',body,headers:{Accept:'application/json'}});const data=await res.json();if(!res.ok||data.error)throw Error(data.error||'No fue posible localizar la dirección.');document.querySelector('#latitud').value=Number(data.location.lat).toFixed(7);document.querySelector('#longitud').value=Number(data.location.lng).toFixed(7);status.textContent=(data.partial_match?'Coincidencia parcial: ':'Ubicación sugerida: ')+data.address+'. Revisa las coordenadas antes de guardar.';}
  catch(error){status.textContent=error.message||'Servicio no disponible. Captura las coordenadas manualmente.';}finally{geo.disabled=false;}
 });
-document.querySelectorAll('form[method=post]').forEach(f=>f.addEventListener('submit',()=>{const submit=f.querySelector('button[type=submit]');if(submit){submit.disabled=true;submit.dataset.original=submit.textContent;submit.textContent='Guardando…';}}));
+document.querySelectorAll('form[method=post]').forEach(f=>f.addEventListener('submit',()=>{const submit=f.querySelector('button[type=submit]');if(submit){submit.disabled=true;submit.dataset.original=submit.textContent;submit.textContent=f.closest('.login-form')?'Verificando acceso…':'Guardando…';}}));
 window.addEventListener('pageshow',()=>document.querySelectorAll('button[data-original]').forEach(b=>{b.disabled=false;b.textContent=b.dataset.original;}));
 const captchaReload=document.querySelector('#captcha-reload');
 captchaReload?.addEventListener('click',async()=>{
