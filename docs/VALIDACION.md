@@ -37,3 +37,11 @@ Si el servidor de pruebas estaba abierto con una base anterior, detener solo ese
 ## Límites de la verificación
 
 No se verificó una llamada real a Google porque no se proporcionó clave. Tampoco se probó una conexión al sistema heredado de caja/entregas, cuya estructura no fue entregada. No se ejecutó una migración de datos reales ni un despliegue público. El servidor integrado de PHP se usa solo para revisión local.
+
+## Captcha de inicio de sesión (2026-09-29)
+
+El acceso exige un código de cinco caracteres, con imagen PNG local, recarga mediante POST con CSRF, vencimiento de cinco minutos y consumo en cada intento. La imagen se genera con zlib sin requerir GD ni servicios externos. Hasta cinco desafíos por sesión permiten usar distintas pestañas. Se conserva el límite de intentos de autenticación.
+
+Validación: `php tests/captcha.php` (12 comprobaciones) y `python tests/http_smoke.py` contra el servidor aislado de pruebas (33 comprobaciones, incluidos ROOT y ALTAS). `tests/captcha_fixture.php` solo funciona por CLI y únicamente modifica sesiones correspondientes a la base de pruebas indicada en `tmp/test-db-name.txt`; permite probar respuestas conocidas sin agregar excepciones a la autenticación de la aplicación. Se verificaron la imagen y el botón Cambiar código en el navegador local.
+
+Despliegue: actualizar el código de PIPAS. No requiere migraciones, extensiones adicionales ni cambios a Nginx. El refresco utiliza `index.php?route=captcha`, compatible con la ruta publicada `/pipas/index.php`. CSS y JavaScript incluyen versión por fecha del archivo para renovar la caché.

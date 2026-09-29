@@ -27,3 +27,16 @@ geo?.addEventListener('click',async()=>{
 });
 document.querySelectorAll('form[method=post]').forEach(f=>f.addEventListener('submit',()=>{const submit=f.querySelector('button[type=submit]');if(submit){submit.disabled=true;submit.dataset.original=submit.textContent;submit.textContent='Guardando…';}}));
 window.addEventListener('pageshow',()=>document.querySelectorAll('button[data-original]').forEach(b=>{b.disabled=false;b.textContent=b.dataset.original;}));
+const captchaReload=document.querySelector('#captcha-reload');
+captchaReload?.addEventListener('click',async()=>{
+ const login=captchaReload.closest('form'),status=document.querySelector('#captcha-status'),input=document.querySelector('#captcha-input'),id=document.querySelector('#captcha-id'),submit=login.querySelector('button[type=submit]');
+ captchaReload.disabled=true;submit.disabled=true;status.textContent='Generando otro código…';
+ try{
+  const body=new FormData();body.append('csrf',login.querySelector('[name=csrf]').value);body.append('captcha_id',id.value);
+  const response=await fetch(captchaReload.dataset.url,{method:'POST',body,headers:{Accept:'application/json'}});
+  if(!response.ok)throw Error('No se pudo cambiar el código. Actualiza la página e intenta de nuevo.');
+  const data=await response.json();document.querySelector('#captcha-image').src=data.image;id.value=data.id;input.value='';input.focus();status.textContent='Nuevo código generado. Válido durante 5 minutos.';
+ }catch(error){status.textContent=error.message||'No se pudo cambiar el código. Intenta nuevamente.';}
+ finally{captchaReload.disabled=false;submit.disabled=false;}
+});
+document.querySelector('#captcha-input')?.addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase();});

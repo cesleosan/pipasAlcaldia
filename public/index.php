@@ -10,19 +10,27 @@ if(isset($_SESSION['user'])){
     if(time()-($_SESSION['last_activity']??0)>3600){unset($_SESSION['user']);flash('Tu sesión expiró. Inicia sesión otra vez.','info');}
     else {$fresh=Database::query($db,'SELECT id_usuario,nombre,usuario,perfil FROM usuario WHERE id_usuario=? AND activo=1',[$_SESSION['user']['id_usuario']])->fetch();if(!$fresh)unset($_SESSION['user']);else $_SESSION['user']=$fresh;}
 }
+if($route==='captcha'){
+    header('Content-Type: application/json; charset=utf-8');
+    if($method!=='POST'){http_response_code(405);header('Allow: POST');echo json_encode(['error'=>'Método no permitido.']);exit;}
+    if(isset($_SESSION['user'])){http_response_code(403);echo json_encode(['error'=>'Ya tienes una sesión activa.']);exit;}
+    echo json_encode(Captcha::issue($_SESSION,$_POST['captcha_id']??null),JSON_THROW_ON_ERROR);exit;
+}
 if($route==='login'){
     if($method==='POST'){
         $name=trim(is_string($_POST['usuario']??null)?$_POST['usuario']:'');
         $password=is_string($_POST['password']??null)?$_POST['password']:'';
+        $captchaValid=Captcha::verify($_SESSION,$_POST['captcha_id']??null,$_POST['captcha_input']??null);
         $key=hash('sha256',($_SERVER['REMOTE_ADDR']??'').'|'.mb_strtolower($name));
         Database::query($db,"INSERT INTO login_intento(clave,intentos,ventana) VALUES (?,1,NOW()) ON DUPLICATE KEY UPDATE intentos=IF(ventana<DATE_SUB(NOW(),INTERVAL 15 MINUTE),1,intentos+1),ventana=IF(ventana<DATE_SUB(NOW(),INTERVAL 15 MINUTE),NOW(),ventana)",[$key]);
         $attempt=(int)Database::query($db,'SELECT intentos FROM login_intento WHERE clave=?',[$key])->fetchColumn();
         $u=Database::query($db,'SELECT * FROM usuario WHERE usuario=? AND activo=1',[$name])->fetch();
         if($attempt>8){http_response_code(429);$error='Demasiados intentos. Espera 15 minutos antes de intentar de nuevo.';}
-        elseif($u && password_verify($password,$u['password_hash'])){session_regenerate_id(true);unset($u['password_hash']);$_SESSION['user']=$u;$_SESSION['last_activity']=time();$_SESSION['csrf']=bin2hex(random_bytes(32));Database::query($db,'DELETE FROM login_intento WHERE clave=?',[$key]);redirect('dashboard');}
+        elseif(!$captchaValid){http_response_code(422);$error='El código de seguridad es incorrecto o venció. Captura el nuevo código.';}
+        elseif($u && password_verify($password,$u['password_hash'])){session_regenerate_id(true);unset($u['password_hash'],$_SESSION['login_captchas']);$_SESSION['user']=$u;$_SESSION['last_activity']=time();$_SESSION['csrf']=bin2hex(random_bytes(32));Database::query($db,'DELETE FROM login_intento WHERE clave=?',[$key]);redirect('dashboard');}
         else {$error='Usuario o contraseña incorrectos.';http_response_code(422);}
     }
-    if(isset($_SESSION['user']))redirect('dashboard');view('login',['title'=>'Bienvenido','error'=>$error]);exit;
+    if(isset($_SESSION['user']))redirect('dashboard');view('login',['title'=>'Bienvenido','error'=>$error,'captcha'=>Captcha::issue($_SESSION)]);exit;
 }
 if(!isset($_SESSION['user']))redirect('login');
 $_SESSION['last_activity']=time();$userId=(int)$_SESSION['user']['id_usuario'];

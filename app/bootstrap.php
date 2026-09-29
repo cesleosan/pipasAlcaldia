@@ -6,6 +6,7 @@ if (is_file(__DIR__.'/config.local.php')) $config = array_replace($config, requi
 foreach (array_keys($config) as $key) { $value = getenv('PIPAS_'.strtoupper($key)); if ($value !== false) $config[$key] = $value; }
 require_once __DIR__.'/lib/Database.php';
 require_once __DIR__.'/lib/Validation.php';
+require_once __DIR__.'/lib/Captcha.php';
 require_once __DIR__.'/lib/Padron.php';
 require_once __DIR__.'/lib/helpers.php';
 if (PHP_SAPI !== 'cli') {
