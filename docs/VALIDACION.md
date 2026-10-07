@@ -45,3 +45,7 @@ El acceso exige un código de cinco caracteres, con imagen PNG local, recarga me
 Validación: `php tests/captcha.php` (12 comprobaciones) y `python tests/http_smoke.py` contra el servidor aislado de pruebas (33 comprobaciones, incluidos ROOT y ALTAS). `tests/captcha_fixture.php` solo funciona por CLI y únicamente modifica sesiones correspondientes a la base de pruebas indicada en `tmp/test-db-name.txt`; permite probar respuestas conocidas sin agregar excepciones a la autenticación de la aplicación. Se verificaron la imagen y el botón Cambiar código en el navegador local.
 
 Despliegue: actualizar el código de PIPAS. No requiere migraciones, extensiones adicionales ni cambios a Nginx. El refresco utiliza `index.php?route=captcha`, compatible con la ruta publicada `/pipas/index.php`. CSS y JavaScript incluyen versión por fecha del archivo para renovar la caché.
+
+## Turnos, garzas y mapa (2026-10-06)
+
+88 comprobaciones correctas: integración (30), asignaciones (12), persistencia del mapa (5), HTTP (41). Se probó la interfaz con datos ficticios en escritorio y móvil. Las asignaciones no restringen el horario de acceso. La búsqueda automática con Google requiere configurar la clave y verificarla en el entorno de despliegue. Detalles y comandos en `docs/DESPLIEGUE_TURNOS_MAPA.md`.

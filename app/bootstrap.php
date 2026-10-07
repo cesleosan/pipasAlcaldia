@@ -6,6 +6,7 @@ if (is_file(__DIR__.'/config.local.php')) $config = array_replace($config, requi
 foreach (array_keys($config) as $key) { $value = getenv('PIPAS_'.strtoupper($key)); if ($value !== false) $config[$key] = $value; }
 require_once __DIR__.'/lib/Database.php';
 require_once __DIR__.'/lib/Validation.php';
+require_once __DIR__.'/lib/UserAssignment.php';
 require_once __DIR__.'/lib/Captcha.php';
 require_once __DIR__.'/lib/Padron.php';
 require_once __DIR__.'/lib/helpers.php';
@@ -18,8 +19,8 @@ if (PHP_SAPI !== 'cli') {
     session_start();
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
-    header('Referrer-Policy: same-origin');
-    header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header("Content-Security-Policy: default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; style-src 'self'; script-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
     header('Cache-Control: no-store');
     $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
 }

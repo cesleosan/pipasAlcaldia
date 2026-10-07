@@ -36,6 +36,10 @@ if(!isset($_SESSION['user']))redirect('login');
 $_SESSION['last_activity']=time();$userId=(int)$_SESSION['user']['id_usuario'];
 if(!can('read')){http_response_code(403);view('error',['title'=>'Acceso restringido','message'=>'Tu perfil no tiene acceso al módulo Padrón.']);exit;}
 try {
+    if(in_array($route,['map-js','map-css'],true)){
+        $js=$route==='map-js';header('Content-Type: '.($js?'application/javascript':'text/css').'; charset=utf-8');
+        readfile(__DIR__.'/../app/assets/leaflet.'.($js?'js':'css'));exit;
+    }
     if($route==='logout'){
         if($method!=='POST'){http_response_code(405);throw new DomainException('Usa el botón Cerrar sesión.');}
         $_SESSION=[];session_destroy();redirect('login');
@@ -93,15 +97,32 @@ try {
     }
     if($route==='usuarios'){
         authorize('manage');
+        $editing=null;
+        if(isset($_GET['editar'])){
+            $editing=Database::query($db,'SELECT u.id_usuario,u.nombre,u.usuario,u.perfil,a.id_caja,a.dias,a.hora_inicio,a.hora_fin FROM usuario u LEFT JOIN usuario_asignacion a ON a.id_usuario=u.id_usuario WHERE u.id_usuario=?',[Validation::integer($_GET,'editar',1,2147483647)])->fetch();
+            if(!$editing)throw new DomainException('El operador no existe.');
+        }
         if($method==='POST')try{
+            $assignment=UserAssignment::validate($db,$_POST);
+            if($editing){
+                Database::transaction($db,function()use($db,$editing,$assignment,$model,$userId){
+                    UserAssignment::save($db,(int)$editing['id_usuario'],$assignment);
+                    $model->audit($userId,null,'Asignación de operador',['id_usuario'=>$editing['id_usuario']]+$assignment);
+                });
+                flash('Garza y turno actualizados.');redirect('usuarios');
+            }
             $name=Validation::text($_POST,'nombre',100);$login=Validation::text($_POST,'usuario',60);$password=Validation::text($_POST,'password',200);
             $role=Validation::integer($_POST,'perfil',1,11);if(!in_array($role,[1,11],true))throw new DomainException('Perfil inválido.');
             if(mb_strlen($password)<12 || strlen($password)>72)throw new DomainException('La contraseña debe tener al menos 12 caracteres y máximo 72 bytes.');
             if(!preg_match('/^[a-zA-Z0-9._-]{3,60}$/D',$login))throw new DomainException('El usuario debe tener 3 a 60 letras, números, puntos o guiones.');
-            Database::transaction($db,function()use($db,$name,$login,$password,$role,$model,$userId){Database::query($db,'INSERT INTO usuario(nombre,usuario,password_hash,perfil) VALUES (?,?,?,?)',[$name,$login,password_hash($password,PASSWORD_DEFAULT),$role]);$model->audit($userId,null,'Alta de operador',['usuario'=>$login,'perfil'=>$role]);});
-            flash('Operador creado.');redirect('usuarios');
-        }catch(DomainException $e){$error=$e->getMessage();}catch(PDOException $e){if(($e->errorInfo[1]??0)!==1062)throw $e;$error='El nombre de usuario ya está ocupado.';}
-        view('users',['title'=>'Usuarios del sistema','users'=>Database::query($db,'SELECT id_usuario,nombre,usuario,perfil,activo FROM usuario ORDER BY nombre')->fetchAll(),'error'=>$error]);exit;
+            Database::transaction($db,function()use($db,$name,$login,$password,$role,$assignment,$model,$userId){
+                Database::query($db,'INSERT INTO usuario(nombre,usuario,password_hash,perfil) VALUES (?,?,?,?)',[$name,$login,password_hash($password,PASSWORD_DEFAULT),$role]);
+                $id=(int)$db->lastInsertId();UserAssignment::save($db,$id,$assignment);
+                $model->audit($userId,null,'Alta de operador',['id_usuario'=>$id,'usuario'=>$login,'perfil'=>$role]+$assignment);
+            });
+            flash('Operador creado con su asignación.');redirect('usuarios');
+        }catch(DomainException $e){$error=$e->getMessage();http_response_code(422);}catch(PDOException $e){if(($e->errorInfo[1]??0)!==1062)throw $e;$error='El nombre de usuario ya está ocupado.';http_response_code(422);}
+        view('users',['title'=>'Usuarios del sistema','editing'=>$editing,'catalogs'=>$model->catalogs(),'users'=>Database::query($db,'SELECT u.id_usuario,u.nombre,u.usuario,u.perfil,u.activo,a.dias,a.hora_inicio,a.hora_fin,c.nombre AS garza FROM usuario u LEFT JOIN usuario_asignacion a ON a.id_usuario=u.id_usuario LEFT JOIN caja c ON c.id_caja=a.id_caja ORDER BY u.nombre')->fetchAll(),'error'=>$error]);exit;
     }
     if($route==='cuenta'){
         if($method==='POST')try{

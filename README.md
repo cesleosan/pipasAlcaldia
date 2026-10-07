@@ -27,7 +27,8 @@ Al iniciar por primera vez, agrega **colonias, garzas/cajas, tipos de padrón y 
 - Cuota inicial de 1 a 5 viajes; ajustes de 1 a 10, con historial e índice de una sola cuota vigente.
 - Autorizaciones extraordinarias sin alterar la cuota regular; autoridad y justificación obligatorias.
 - Historial de compras/entregas, dotaciones, bloqueos, extraordinarios y bitácora.
-- Coordenadas manuales y geocodificación Google configurable; enlace al mapa desde la ficha.
+- Mapa interactivo Leaflet con OpenStreetMap: seleccionar, arrastrar o quitar el punto y sincronizar coordenadas. Geocodificación Google configurable; enlace al mapa desde la ficha.
+- Asignación de garza y turno semanal a operadores nuevos y existentes, con auditoría. El turno es informativo, admite cruce de medianoche y no modifica perfiles ni restringe el acceso.
 - CSS e iconos locales, sin depender de CDN para usar la interfaz.
 
 ## Instalación en otro servidor
@@ -55,3 +56,8 @@ El instalador no migra una base heredada: crea un esquema nuevo. No ejecutar sob
 `tests/http_smoke.py` comprueba rutas, sesión, CSRF y permisos contra el servidor de pruebas de puerto 8089. Requiere la base y usuarios de prueba descritos en `docs/VALIDACION.md`.
 
 Consultar `docs/REQUISITOS_Y_DECISIONES.md` para trazabilidad y diferencias documentales, y `docs/VALIDACION.md` para resultados y límites verificados.
+
+
+## Actualización de turnos y mapa (2026-10-06)
+
+Consulta `docs/DESPLIEGUE_TURNOS_MAPA.md`. Las instalaciones existentes deben aplicar `sql/002_usuario_asignacion.sql` con un usuario de mantenimiento antes de usar Usuarios. El instalador nuevo ya incluye esa tabla.

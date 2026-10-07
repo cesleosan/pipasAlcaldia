@@ -3,7 +3,7 @@ declare(strict_types=1);
 require __DIR__.'/../app/bootstrap.php';
 $admin=json_decode(file_get_contents(__DIR__.'/../storage/dev-db-admin.json'),true);
 $c=array_replace($config,['db_user'=>'root','db_pass'=>$admin['password'],'db_name'=>'pipas_tlalpan_test_'.date('YmdHis')]);
-$db=Database::connect($c,false);$db->exec('CREATE DATABASE `'.$c['db_name'].'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');$db->exec('USE `'.$c['db_name'].'`');$db->exec(file_get_contents(__DIR__.'/../sql/001_padron.sql'));$m=new Padron($db);
+$db=Database::connect($c,false);$db->exec('CREATE DATABASE `'.$c['db_name'].'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');$db->exec('USE `'.$c['db_name'].'`');$db->exec(file_get_contents(__DIR__.'/../sql/001_padron.sql'));$db->exec(file_get_contents(__DIR__.'/../sql/002_usuario_asignacion.sql'));$m=new Padron($db);
 $checks=0;
 function expect(bool $v,string $label):void{global $checks;if(!$v)throw new RuntimeException('FAIL: '.$label);$checks++;echo 'PASS '.$label."\n";}
 function rejects(callable $fn,string $label):void{try{$fn();}catch(DomainException|PDOException $e){expect(true,$label);return;}throw new RuntimeException('FAIL no rechazó: '.$label);}

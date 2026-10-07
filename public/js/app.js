@@ -22,7 +22,7 @@ geo?.addEventListener('click',async()=>{
  const status=document.querySelector('#geocode-status');const street=document.querySelector('#calle').value.trim(),number=document.querySelector('#num_ext_mza').value.trim(),colony=document.querySelector('#colonia_id_colonia');
  if(!street||!number||!colony.value){status.textContent='Captura calle, número exterior y colonia para localizar el domicilio.';return;}
  geo.disabled=true;status.textContent='Buscando dirección…';
- try{const body=new FormData();body.append('csrf',form.querySelector('[name=csrf]').value);body.append('address',[street,number,colony.selectedOptions[0].textContent,document.querySelector('#cp').value].filter(Boolean).join(', '));const res=await fetch(form.dataset.geocodeUrl,{method:'POST',body,headers:{Accept:'application/json'}});const data=await res.json();if(!res.ok||data.error)throw Error(data.error||'No fue posible localizar la dirección.');document.querySelector('#latitud').value=Number(data.location.lat).toFixed(7);document.querySelector('#longitud').value=Number(data.location.lng).toFixed(7);status.textContent=(data.partial_match?'Coincidencia parcial: ':'Ubicación sugerida: ')+data.address+'. Revisa las coordenadas antes de guardar.';}
+ try{const body=new FormData();body.append('csrf',form.querySelector('[name=csrf]').value);body.append('address',[street,number,colony.selectedOptions[0].textContent,document.querySelector('#cp').value].filter(Boolean).join(', '));const res=await fetch(form.dataset.geocodeUrl,{method:'POST',body,headers:{Accept:'application/json'}});const data=await res.json();if(!res.ok||data.error)throw Error(data.error||'No fue posible localizar la dirección.');document.querySelector('#latitud').value=Number(data.location.lat).toFixed(7);document.querySelector('#longitud').value=Number(data.location.lng).toFixed(7);document.querySelector('#latitud').dispatchEvent(new Event('change'));status.textContent=(data.partial_match?'Coincidencia parcial: ':'Ubicación sugerida: ')+data.address+'. Revisa las coordenadas antes de guardar.';}
  catch(error){status.textContent=error.message||'Servicio no disponible. Captura las coordenadas manualmente.';}finally{geo.disabled=false;}
 });
 document.querySelectorAll('form[method=post]').forEach(f=>f.addEventListener('submit',()=>{const submit=f.querySelector('button[type=submit]');if(submit){submit.disabled=true;submit.dataset.original=submit.textContent;submit.textContent=f.closest('.login-form')?'Verificando acceso…':'Guardando…';}}));
@@ -40,3 +40,32 @@ captchaReload?.addEventListener('click',async()=>{
  finally{captchaReload.disabled=false;submit.disabled=false;}
 });
 document.querySelector('#captcha-input')?.addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase();});
+
+// El domicilio se conserva separado del punto elegido por el operador.
+const mapContainer=document.querySelector('#address-map');
+if(mapContainer){
+ const lat=document.querySelector('#latitud'),lng=document.querySelector('#longitud'),selection=document.querySelector('#map-selection'),loadStatus=document.querySelector('#map-load-status');
+ const centerButton=document.querySelector('#map-center'),clearButton=document.querySelector('#map-clear');
+ const validPoint=()=>lat.value.trim()!==''&&lng.value.trim()!==''&&Number.isFinite(Number(lat.value))&&Number.isFinite(Number(lng.value))&&Math.abs(Number(lat.value))<=90&&Math.abs(Number(lng.value))<=180;
+ if(!window.L){loadStatus.textContent='No fue posible cargar el mapa. Puedes capturar las coordenadas manualmente.';centerButton.disabled=true;clearButton.disabled=true;}
+ else{
+  const map=L.map(mapContainer,{scrollWheelZoom:false,minZoom:3,maxZoom:19}).setView([19.2879,-99.1677],13);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map).on('tileerror',()=>{loadStatus.textContent='No se pudo cargar parte del mapa. Revisa tu conexión; las coordenadas capturadas se conservan.';});
+  let marker=null;
+  const pin=L.divIcon({className:'pipas-map-pin',html:'<span></span>',iconSize:[28,36],iconAnchor:[14,36]});
+  function place(latitude,longitude,focus=false){
+   lat.value=Number(latitude).toFixed(7);lng.value=Number(longitude).toFixed(7);
+   if(!marker){marker=L.marker([latitude,longitude],{icon:pin,draggable:true,autoPan:true,title:'Ubicación del inmueble: arrastra para ajustar'}).addTo(map);marker.on('dragend',()=>{const p=marker.getLatLng();place(p.lat,p.lng);});}
+   else marker.setLatLng([latitude,longitude]);
+   if(focus)map.setView([latitude,longitude],17);
+   selection.textContent='Punto seleccionado · '+lat.value+', '+lng.value;selection.classList.add('is-selected');clearButton.disabled=false;
+  }
+  function sync(){if(validPoint())place(Number(lat.value),Number(lng.value),true);else{if(marker){map.removeLayer(marker);marker=null;}selection.textContent=lat.value||lng.value?'Completa ambas coordenadas válidas':'Sin punto seleccionado';selection.classList.remove('is-selected');clearButton.disabled=!lat.value&&!lng.value;}}
+  map.on('click',e=>place(e.latlng.lat,e.latlng.lng));
+  centerButton.addEventListener('click',()=>{const p=map.getCenter();place(p.lat,p.lng);});
+  clearButton.addEventListener('click',()=>{lat.value='';lng.value='';sync();});
+  lat.addEventListener('change',sync);lng.addEventListener('change',sync);sync();
+  new ResizeObserver(()=>map.invalidateSize()).observe(mapContainer);
+ }
+ ['calle','num_ext_mza','colonia_id_colonia','cp'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{if(validPoint())document.querySelector('#geocode-status').textContent='Cambió el domicilio. Revisa que el punto del mapa corresponda a la nueva dirección.';}));
+}
